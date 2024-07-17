@@ -1,4 +1,5 @@
 import fitz
+import re
 import io
 from PyPDF2 import PdfReader, PdfWriter, PageObject
 from collections import defaultdict
@@ -13,7 +14,6 @@ def extract_pdf(filename):
     document = fitz.open(filename)
     markers = []
 
-    
     for page_num in range(len(document)):
         page = document.load_page(page_num)
         text = page.get_text('dict')
@@ -21,28 +21,41 @@ def extract_pdf(filename):
         for block in text['blocks']:
             for line in block['lines']:
                 for span in line['spans']:
-                    if "\uf0a8" in span["text"]:
+                    if re.search(r'[\uf0a8\uf0f0]', span["text"]):
                         markers.append({
                             "type": "radio",
                             "x": span["bbox"][0],
                             "y": span["bbox"][1],
+                            "size": span["size"],
                             "page_num": page_num
                         })
                     elif "___" in span["text"]:
-                        markers.append({
-                            "type": "text",
-                            "x": span["bbox"][0],
-                            "y": span["bbox"][1],
-                            "width": span["bbox"][2] - span["bbox"][0],
-                            "page_num": page_num
-                        })
-                        
+                        if 'Signature' not in span["text"]:
+                            underscore_matches = re.finditer(r'_{3,}', span["text"])
+                            for match in underscore_matches:
+                            
+                                start_index = match.start()
+                                end_index = match.end()
+
+                                preceding_text_width = fitz.get_text_length(span["text"][:start_index])
+                                underscore_width = fitz.get_text_length(span["text"][start_index:end_index])
+
+                                start_x = span['bbox'][0] + preceding_text_width
+                                end_x = start_x + underscore_width
+                                width = end_x - start_x
+
+                                markers.append({
+                                    "type": "text",
+                                    "x": start_x,
+                                    "y": span['bbox'][1],
+                                    "width": width,
+                                    "page_num": page_num
+                                })                 
     return markers
                         
 def create_interactive_pdf(original_file, output_path, markers):
     original_pdf = PdfReader(open(original_file, 'rb'))
     output_pdf = PdfWriter()
-    radio_size = 15
     
     for i in range(len(original_pdf.pages)):
         original_page = original_pdf.pages[i]
@@ -67,9 +80,9 @@ def create_interactive_pdf(original_file, output_path, markers):
                 acroform.radio(
                     name=group_name,
                     value=f"Option{marker['x']}",
-                    x=marker['x'] + (radio_size / 10) ,
-                    y=original_page_height - (marker['y'] + radio_size),
-                    size= radio_size,
+                    x=marker['x'],
+                    y=original_page_height - (marker['y'] + marker['size'] + 2),
+                    size= (marker['size'] + 2),
                     buttonStyle="cross",
                     shape="square",
                     selected=False,
