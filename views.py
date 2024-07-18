@@ -1,22 +1,29 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from widgets import FileUploadButton
+from widgets import UploadFileBox
 
 class Main(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Interactive Form Generator')
-        self.resize(500, 600)
+        self.resize(200, 200)
         
-        self.mainWidget = QWidget(self)
-        self.mainLayout = QGridLayout()
+        self.setContentsMargins(40, 40, 40, 40)
         
-        tagline = QLabel('Interactive Form Generator')
-        self.mainLayout.addWidget(tagline, 2, 0, 4, 1, alignment=Qt.AlignCenter)
+        self.mainWidget = QWidget()
+        self.mainLayout = QGridLayout(self.mainWidget)
         
-        fileUpload = FileUploadButton()
-        self.mainLayout.addWidget(fileUpload, 3, 0, 4, 1, alignment=Qt.AlignCenter)
+        self.dropLayout = QVBoxLayout()
+        self.mainLayout.addLayout(self.dropLayout, 1, 0, 4, 2)
         
-        self.mainWidget.setLayout(self.mainLayout)
+        self.logo = QPixmap('./assets/interactive_form_logo.png')
+        self.logo = self.logo.scaled(350, 200)
+        tagline = QLabel(self)
+        tagline.setPixmap(self.logo)
+        self.mainLayout.addWidget(tagline, 0, 0, 1, 1, alignment=Qt.AlignCenter)
+        
+        fileUpload = UploadFileBox()
+        self.dropLayout.addWidget(fileUpload)
+        
         self.setCentralWidget(self.mainWidget)
