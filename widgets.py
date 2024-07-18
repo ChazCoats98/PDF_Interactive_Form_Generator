@@ -7,7 +7,9 @@ class UploadFileBox(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setMinimumSize(200, 200)
         self.file = []
+        self.parent = parent
         
         self.initUi()
         
@@ -53,8 +55,6 @@ class UploadFileBox(QWidget):
         anim.setDuration(self.duration)
         self.growAnim.addAnimation(anim)
         
-        print(property, anim.startValue())
-        
         reverseAnim = QPropertyAnimation(item, bytes(property, 'utf8'))
         reverseAnim.setEndValue(self.default_properties[property])
         reverseAnim.setDuration(self.duration)
@@ -73,8 +73,25 @@ class UploadFileBox(QWidget):
     def dropEvent(self, event: QDropEvent):
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
+                if not (url.toString().endswith('.pdf') or url.toString().endswith('.xlsx') or url.toString().endswith('.docx') or url.toString().endswith('.doc')):
+                    dlg = QMessageBox()
+                    dlg.setWindowTitle('ERROR')
+                    dlg.setText('Invalid file type. \nFile must be an Excel, Word, or PDF file.')
+                    dlg.exec()
                 self.file.append(url.toLocalFile())
+                self.uploadButton.setText(f'{len(self.file)} files uploaded')
             
+    def showFileError(self):
+        dlg = ErrorDialog(self)
+        #dlg.setIcon(QMessageBox.Warning)
+        #dlg.setWindowTitle('ERROR')
+        #dlg.setText('Invalid file type. \nFile must be an Excel, Word, or PDF file.')
+        #dlg.setStandardButtons(QMessageBox.Ok)
+        dlg.show()
+        
+        
+        
+        
 class UploadButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
@@ -100,3 +117,14 @@ class UploadButton(QPushButton):
         
     color = pyqtProperty(QColor, getColor, setColor)
     borderWidth = pyqtProperty(int, getBorderWidth, setBorderWidth)
+    
+class ErrorDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('ERROR')
+        
+        self.layout = QVBoxLayout()
+        message = QLabel('Invalid file type. \nFile must be an Excel, Word, or PDF file.')
+        self.layout.addWidget(message)
+        self.layout.addWidget(QDialogButtonBox.Ok)
+        self.setLayout(self.layout)

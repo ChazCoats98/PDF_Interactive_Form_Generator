@@ -28,7 +28,7 @@ class Main(QMainWindow):
         fileUpload = UploadFileBox()
         self.dropLayout.addWidget(fileUpload)
         
-        self.mainLayout.setRowStretch(2, 10)
+        self.mainLayout.setRowStretch(2, 200)
         self.mainLayout.setColumnStretch(0, 1)
         
         self.setCentralWidget(self.mainWidget)
