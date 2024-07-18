@@ -6,11 +6,7 @@ from PyQt5.QtGui import *
 class UploadFileBox(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(350, 300)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setAcceptDrops(True)
-        self.setAutoFillBackground(True)
-
         self.file = []
         
         self.initUi()
@@ -24,22 +20,45 @@ class UploadFileBox(QWidget):
         
         self.uploadButton = UploadButton('Upload File')
         self.uploadButton.setFixedSize(100, 30)
+        
+        self.opacityEffect = QGraphicsOpacityEffect()
+        self.uploadButton.setGraphicsEffect(self.opacityEffect)
+        
+        self.default_properties = {
+            'minimumSize': self.uploadButton.minimumSize(),
+            'color': QColor(240, 240, 240),
+            'opacity': 1,
+            'borderWidth': 1
+        }
+        
         animation_properties = [
-            ('minimumSize', QSize(200, 200)),
-            ('color', QColor(191, 223, 255)),
-            ('opacity', .5)
+            (self.uploadButton, 'minimumSize', QSize(200, 200)),
+            (self.uploadButton,'color', QColor(191, 223, 255)),
+            (self.opacityEffect,'opacity', .5),
+            (self.uploadButton,'borderWidth', 0)
         ]
-        duration = 500
+        self.duration = 200
         
         self.growAnim = QParallelAnimationGroup()
+        self.shrinkAnim = QParallelAnimationGroup()
         
-        for property, value in animation_properties:
-            self.anim = QPropertyAnimation(self.uploadButton, bytes(property, 'utf8'))
-            self.anim.setEndValue(value)
-            self.anim.setDuration(duration)
-            self.growAnim.addAnimation(self.anim)
+        for item, property, value in animation_properties:
+            self.initAnim(item, property, value)
         
         layout.addWidget(self.uploadButton)
+        
+    def initAnim(self, item, property, value):
+        anim = QPropertyAnimation(item, bytes(property, 'utf8'))
+        anim.setEndValue(value)
+        anim.setDuration(self.duration)
+        self.growAnim.addAnimation(anim)
+        
+        print(property, anim.startValue())
+        
+        reverseAnim = QPropertyAnimation(item, bytes(property, 'utf8'))
+        reverseAnim.setEndValue(self.default_properties[property])
+        reverseAnim.setDuration(self.duration)
+        self.shrinkAnim.addAnimation(reverseAnim) 
                 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
@@ -49,6 +68,7 @@ class UploadFileBox(QWidget):
             
     def dragLeaveEvent(self, event: QDragLeaveEvent):
         self.uploadButton.setText('Upload File')
+        self.shrinkAnim.start()
             
     def dropEvent(self, event: QDropEvent):
         if event.mimeData().hasUrls():
@@ -58,13 +78,25 @@ class UploadFileBox(QWidget):
 class UploadButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
-        self._color = QColor('white') 
+        self._color = QColor('white')
+        self._border_width = 1
         
     def getColor(self):
         return self._color
     
+    def getBorderWidth(self):
+        return self._border_width
+    
     def setColor(self, color):
         self._color = color
-        self.setStyleSheet(f"background-color: {color.name()}")
+        self.updateStyleSheet()
+        
+    def setBorderWidth(self, width):
+        self._border_width = width
+        self.updateStyleSheet()
+        
+    def updateStyleSheet(self):
+        self.setStyleSheet(f"border: {self._border_width}px solid; background-color: {self.color.name()}")
         
     color = pyqtProperty(QColor, getColor, setColor)
+    borderWidth = pyqtProperty(int, getBorderWidth, setBorderWidth)
