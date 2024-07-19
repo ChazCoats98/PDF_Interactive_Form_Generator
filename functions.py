@@ -4,6 +4,8 @@ import io
 from PyPDF2 import PdfReader, PdfWriter
 from collections import defaultdict
 from reportlab.pdfgen import canvas
+import xlsx2pdf
+import docx2pdf
 
 def extract_pdf(filename):
     document = fitz.open(filename)
@@ -109,3 +111,6 @@ def create_interactive_pdf(original_file, output_path, markers):
     
     with open(output_path, "wb") as f:
         output_pdf.write(f)
+        
+def xlsx_to_pdf(document):
+    xlsx2pdf.convert(document, './temp/temp_pdf.pdf')
