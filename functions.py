@@ -1,11 +1,14 @@
 import fitz
 import re
 import io
+import os
 from PyPDF2 import PdfReader, PdfWriter
 from collections import defaultdict
 from reportlab.pdfgen import canvas
-import xlsx2pdf
-import docx2pdf
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+import win32com.client
 
 def extract_pdf(filename):
     document = fitz.open(filename)
@@ -50,7 +53,7 @@ def extract_pdf(filename):
                                 })                 
     return markers
                         
-def create_interactive_pdf(original_file, output_path, markers):
+def create_interactive_pdf(original_file, markers):
     original_pdf = PdfReader(open(original_file, 'rb'))
     output_pdf = PdfWriter()
     
@@ -108,9 +111,51 @@ def create_interactive_pdf(original_file, output_path, markers):
         page.merge_page(new_pdf.pages[0])
         
         output_pdf.add_page(page)
-    
-    with open(output_path, "wb") as f:
-        output_pdf.write(f)
+        
+    basePath = f'//server/D/Quality Control'
+    fileName, ok = QFileDialog.getSaveFileName(
+                self,
+                "Save Excel File",
+                basePath,
+                "Excel files (*.xlsx)")
+            
+    if fileName:
+        with open(fileName, "wb") as f:
+            output_pdf.write(f)
         
 def xlsx_to_pdf(document):
-    xlsx2pdf.convert(document, './temp/temp_pdf.pdf')
+    output_file = './temp/temp_pdf.pdf'
+    
+    ex = win32com.client.Dispatch('Excel.Application')
+    ex.Visible = False
+    
+    workbook = ex.Workbooks.Open(document)
+    
+    workbook.ExportAsFixedFormat(0, os.path.abspath(output_file))
+    
+    workbook.Close()
+    ex.quit()
+    
+def open_file_explorer(self):
+    basePath = f'//server/D/Scanned images'
+    filePath, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Open Form File", 
+            basePath
+        )
+    
+    if filePath.endswith('.xlsx'):
+        xlsx_to_pdf(filePath)
+    elif filePath.endswith('.docx') or filePath.endswith('.doc'):
+        print('ehhhh... docx conversion to be implemented soon i guess')
+    elif filePath.endswith('.pdf'):
+        extract_pdf(filePath)
+    else:
+        showFileError(self)
+        
+def showFileError(self):
+    dlg = QMessageBox(self)
+    dlg.setWindowTitle('ERROR')
+    dlg.setText('Invalid file type. \nFile must be an Excel, Word, or PDF file.')
+    dlg.setIcon(QMessageBox.Warning)
+    dlg.exec()

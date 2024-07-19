@@ -26,6 +26,7 @@ class UploadFileBox(QWidget):
         
         self.opacityEffect = QGraphicsOpacityEffect()
         self.uploadButton.setGraphicsEffect(self.opacityEffect)
+        self.uploadButton.clicked.connect(lambda: open_file_explorer(self))
         
         self.default_properties = {
             'minimumSize': self.uploadButton.minimumSize(),
@@ -75,18 +76,11 @@ class UploadFileBox(QWidget):
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
                 if not (url.toString().endswith('.pdf') or url.toString().endswith('.xlsx') or url.toString().endswith('.docx') or url.toString().endswith('.doc')):
-                    self.showFileError()
+                    showFileError(self)
                 elif url.toString().endswith('.xlsx') or url.toString().endswith('.docx') or url.toString().endswith('.doc'):
                     print(url)
                     xlsx_to_pdf(url.toLocalFile())
                 self.uploadButton.setText(f'{len(self.file)} files uploaded')
-            
-    def showFileError(self):
-        dlg = QMessageBox(self)
-        dlg.setWindowTitle('ERROR')
-        dlg.setText('Invalid file type. \nFile must be an Excel, Word, or PDF file.')
-        dlg.setIcon(QMessageBox.Warning)
-        dlg.exec()
         
         
         
