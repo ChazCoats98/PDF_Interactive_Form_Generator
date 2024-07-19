@@ -9,7 +9,7 @@ class UploadFileBox(QWidget):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.setMinimumSize(200, 200)
-        self.file = []
+        self.file = 0
         self.parent = parent
         
         self.initUi()
@@ -75,12 +75,17 @@ class UploadFileBox(QWidget):
     def dropEvent(self, event: QDropEvent):
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
-                if not (url.toString().endswith('.pdf') or url.toString().endswith('.xlsx') or url.toString().endswith('.docx') or url.toString().endswith('.doc')):
+                if url.toString().endswith('.pdf'):
+                    self.shrinkAnim.start()
+                    extract_pdf(self, url.toLocalFile())
+                elif url.toString().endswith('.xlsx'):
+                    self.shrinkAnim.start()
+                    xlsx_to_pdf(self, url.toLocalFile())
+                elif url.toString().endswith('.docx') or url.toString().endswith('.doc'):
+                    self.shrinkAnim.start()
+                    print('still no docx support. sorry im lazy')
+                else:
                     showFileError(self)
-                elif url.toString().endswith('.xlsx') or url.toString().endswith('.docx') or url.toString().endswith('.doc'):
-                    print(url)
-                    xlsx_to_pdf(url.toLocalFile())
-                self.uploadButton.setText(f'{len(self.file)} files uploaded')
         
         
         

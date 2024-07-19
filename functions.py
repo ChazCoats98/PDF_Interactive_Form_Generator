@@ -10,7 +10,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import win32com.client
 
-def extract_pdf(filename):
+def extract_pdf(self, filename):
     document = fitz.open(filename)
     markers = []
 
@@ -51,9 +51,9 @@ def extract_pdf(filename):
                                     "width": width,
                                     "page_num": page_num
                                 })                 
-    return markers
+    create_interactive_pdf(self, filename, markers)
                         
-def create_interactive_pdf(original_file, markers):
+def create_interactive_pdf(self, original_file, markers):
     original_pdf = PdfReader(open(original_file, 'rb'))
     output_pdf = PdfWriter()
     
@@ -117,13 +117,15 @@ def create_interactive_pdf(original_file, markers):
                 self,
                 "Save Excel File",
                 basePath,
-                "Excel files (*.xlsx)")
+                "PDF Files (*.pdf)")
             
     if fileName:
         with open(fileName, "wb") as f:
             output_pdf.write(f)
+        self.file += 1
+        self.uploadButton.setText(f'{self.file} files converted')
         
-def xlsx_to_pdf(document):
+def xlsx_to_pdf(self, document):
     output_file = './temp/temp_pdf.pdf'
     
     ex = win32com.client.Dispatch('Excel.Application')
@@ -136,6 +138,8 @@ def xlsx_to_pdf(document):
     workbook.Close()
     ex.quit()
     
+    extract_pdf(self, output_file)
+    
 def open_file_explorer(self):
     basePath = f'//server/D/Scanned images'
     filePath, _ = QFileDialog.getOpenFileName(
@@ -145,11 +149,11 @@ def open_file_explorer(self):
         )
     
     if filePath.endswith('.xlsx'):
-        xlsx_to_pdf(filePath)
+        xlsx_to_pdf(self, filePath)
     elif filePath.endswith('.docx') or filePath.endswith('.doc'):
         print('ehhhh... docx conversion to be implemented soon i guess')
     elif filePath.endswith('.pdf'):
-        extract_pdf(filePath)
+        extract_pdf(self, filePath)
     else:
         showFileError(self)
         
