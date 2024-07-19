@@ -10,7 +10,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import win32com.client
 
-def extract_pdf(self, filename):
+def extract_pdf(self, filename, original_filename):
     document = fitz.open(filename)
     markers = []
 
@@ -51,9 +51,9 @@ def extract_pdf(self, filename):
                                     "width": width,
                                     "page_num": page_num
                                 })                 
-    create_interactive_pdf(self, filename, markers)
+    create_interactive_pdf(self, filename, markers, original_filename)
                         
-def create_interactive_pdf(self, original_file, markers):
+def create_interactive_pdf(self, original_file, markers, original_filename):
     original_pdf = PdfReader(open(original_file, 'rb'))
     output_pdf = PdfWriter()
     
@@ -115,8 +115,8 @@ def create_interactive_pdf(self, original_file, markers):
     basePath = f'//server/D/Quality Control'
     fileName, ok = QFileDialog.getSaveFileName(
                 self,
-                "Save Excel File",
-                basePath,
+                "Save Form File",
+                original_filename,
                 "PDF Files (*.pdf)")
             
     if fileName:
@@ -125,11 +125,13 @@ def create_interactive_pdf(self, original_file, markers):
         self.file += 1
         self.uploadButton.setText(f'{self.file} files converted')
         
-def xlsx_to_pdf(self, document):
+def xlsx_to_pdf(self, document, original_filename):
     output_file = './temp/temp_pdf.pdf'
     
     ex = win32com.client.Dispatch('Excel.Application')
+    print(dir(ex))
     ex.Visible = False
+    ex.DisplayAlerts = False
     
     workbook = ex.Workbooks.Open(document)
     
@@ -138,7 +140,7 @@ def xlsx_to_pdf(self, document):
     workbook.Close()
     ex.quit()
     
-    extract_pdf(self, output_file)
+    extract_pdf(self, output_file, original_filename)
     
 def open_file_explorer(self):
     basePath = f'//server/D/Scanned images'
@@ -148,12 +150,18 @@ def open_file_explorer(self):
             basePath
         )
     
+    filedata = filePath.split('/')
+    for f in filedata:
+        if f.endswith('.xlsx') or f.endswith('.docx') or f.endswith('.doc') or f.endswith('.pdf'):
+            original_filename = f.split('.')[0]
+            print(original_filename)
+            
     if filePath.endswith('.xlsx'):
-        xlsx_to_pdf(self, filePath)
+        xlsx_to_pdf(self, filePath, original_filename)
     elif filePath.endswith('.docx') or filePath.endswith('.doc'):
         print('ehhhh... docx conversion to be implemented soon i guess')
     elif filePath.endswith('.pdf'):
-        extract_pdf(self, filePath)
+        extract_pdf(self, filePath, original_filename)
     else:
         showFileError(self)
         
