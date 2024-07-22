@@ -11,6 +11,7 @@ class UploadFileBox(QWidget):
         self.setMinimumSize(200, 200)
         self.file = 0
         self.parent = parent
+        self.thread = None
         
         self.initUi()
         
@@ -26,7 +27,7 @@ class UploadFileBox(QWidget):
         
         self.opacityEffect = QGraphicsOpacityEffect()
         self.uploadButton.setGraphicsEffect(self.opacityEffect)
-        self.uploadButton.clicked.connect(lambda: open_file_explorer(self))
+        self.uploadButton.clicked.connect(self.open_file_explorer)
         
         self.default_properties = {
             'minimumSize': self.uploadButton.minimumSize(),
@@ -75,19 +76,50 @@ class UploadFileBox(QWidget):
     def dropEvent(self, event: QDropEvent):
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
-                if url.toString().endswith('.pdf'):
-                    self.shrinkAnim.start()
-                    extract_pdf(self, url.toLocalFile())
-                elif url.toString().endswith('.xlsx'):
-                    self.shrinkAnim.start()
-                    xlsx_to_pdf(self, url.toLocalFile())
-                elif url.toString().endswith('.docx') or url.toString().endswith('.doc'):
-                    self.shrinkAnim.start()
-                    print('still no docx support. sorry im lazy')
-                else:
-                    showFileError(self)
-        
-        
+                self.shrinkAnim.start()
+                self.startThread(url.toLocalFile())
+                self.uploadButton.setText('Upload File')
+                
+    def open_file_explorer(self):
+        basePath = f'//server/D/Scanned images'
+        filePath, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Open Form File", 
+            basePath
+        )
+        if filePath:
+            self.startThread(filePath)
+    
+    def startThread(self, filePath):
+        if self.thread is not None and self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+            
+        self.thread = QThread()
+        self.worker = Worker(filePath)
+        self.worker.moveToThread(self.thread)
+                
+        self.worker.init_file_dialog.connect(self.openFileDialog)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+                
+    @pyqtSlot(str)
+    def openFileDialog(self, original_filename):
+        fileName, ok = QFileDialog.getSaveFileName(
+            self,
+            "Save Form File",
+            original_filename,
+            "PDF Files (*.pdf)")
+            
+        if fileName:
+            with open(fileName, "wb") as f:
+                self.worker.output_pdf.write(f)
+            self.file += 1
+            self.uploadButton.setText(f'{self.file} files converted')
+            self.worker.finished.emit()
         
 class UploadButton(QPushButton):
     def __init__(self, text, parent=None):
