@@ -125,8 +125,10 @@ class Worker(QObject):
 
             packet.seek(0)
             new_pdf = PdfReader(packet)
+            print(new_pdf)
             page = original_pdf.pages[i]
-            page.merge_page(new_pdf.pages[0])
+            if new_pdf.pages[0]:
+                page.merge_page(new_pdf.pages[0])
         
             self.output_pdf.add_page(page)
             
@@ -157,11 +159,12 @@ class Worker(QObject):
         wd.DisplayAlerts = False
     
         doc = wd.Documents.Open(document)
+        print(dir(wd))
     
         doc.ExportAsFixedFormat(OutputFileName=os.path.abspath(output_file), ExportFormat=17)
     
         doc.Close()
-        wd.quit()
+        wd.Quit()
     
         self.extract_pdf(output_file)
         
