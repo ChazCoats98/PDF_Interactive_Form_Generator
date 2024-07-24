@@ -35,6 +35,7 @@ class Worker(QObject):
         for page_num in range(len(document)):
             page = document.load_page(page_num)
             text = page.get_text('dict')
+            lineNum = 0
         
             for block in text['blocks']:
                 for line in block['lines']:
@@ -47,27 +48,34 @@ class Worker(QObject):
                                 "size": span["size"],
                                 "page_num": page_num
                             })
-                        elif "___" in span["text"]:
-                            if 'Signature' not in span["text"]:
-                                underscore_matches = re.finditer(r'_{3,}', span["text"])
-                                for match in underscore_matches:
-                            
-                                    start_index = match.start()
-                                    end_index = match.end()
+                        else:
+                            bracket_matches = re.finditer(r'\[([^\]]*)\]', span['text'])
+                            for match in bracket_matches:
+                                print(match)
+                                print('___________________')
+                                start_index = match.start()
+                                end_index = match.end()
 
-                                    preceding_text_width = fitz.get_text_length(span["text"][:start_index])
-                                    underscore_width = fitz.get_text_length(span["text"][start_index:end_index])
+                                preceding_text = span['text'][:start_index]
+                                bracket_text = span['text'][start_index:end_index]
+                                
+                                preceding_text_width = fitz.get_text_length(preceding_text)
+                                bracket_text_width = fitz.get_text_length(bracket_text)
+                                print(f'preceding text: {preceding_text}, preceding text width: {preceding_text_width}')
+                                print(f'bracket text: {bracket_text}, bracket text width: {bracket_text_width}')
 
-                                    start_x = span['bbox'][0] + preceding_text_width
-                                    end_x = start_x + underscore_width
-                                    width = end_x - start_x
+                                start_x = span['bbox'][0] + preceding_text_width
+                                width = bracket_text_width
+                                height = span['bbox'][3] - span['bbox'][1]
+                                lineNum += 1
 
-                                    markers.append({
-                                        "type": "text",
-                                        "x": start_x,
-                                        "y": span['bbox'][1],
-                                        "width": width,
-                                        "page_num": page_num
+                                markers.append({
+                                    "type": "text",
+                                    "x": start_x,
+                                    "y": span['bbox'][1],
+                                    "width": width,
+                                    'height': height,
+                                    "page_num": page_num
                                     })                 
         self.create_interactive_pdf(filename, markers)
                         
@@ -107,14 +115,15 @@ class Worker(QObject):
                     )
             text_counter = 1
             for marker in markers:
+                print(marker)
                 text_counter += 1
                 if marker["type"] == "text":
                     acroform.textfield(
                         name=f"TextField{text_counter}",
-                        x=marker['x'] - 5,
-                        y=original_page_height - (marker['y'] + 10),
+                        x=marker['x'] - (marker['height'] / 2),
+                        y=original_page_height - marker['y'],
                         width=marker['width'],
-                        height=20,
+                        height=marker['height'],
                         borderStyle="solid",
                         borderWidth=1,
                         forceBorder=True,
@@ -125,7 +134,6 @@ class Worker(QObject):
 
             packet.seek(0)
             new_pdf = PdfReader(packet)
-            print(new_pdf)
             page = original_pdf.pages[i]
             if new_pdf.pages[0]:
                 page.merge_page(new_pdf.pages[0])
@@ -138,7 +146,6 @@ class Worker(QObject):
         output_file = './temp/temp_pdf.pdf'
     
         ex = win32com.client.Dispatch('Excel.Application')
-        print(dir(ex))
         ex.Visible = False
         ex.DisplayAlerts = False
     

@@ -14,7 +14,6 @@ class Main(QMainWindow):
         self.mainWidget = QWidget()
         self.mainLayout = QGridLayout(self.mainWidget)
         
-        
         self.logo = QPixmap('./assets/interactive_form_logo_70.png')
         tagline = QLabel(self)
         tagline.setPixmap(self.logo)
