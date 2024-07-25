@@ -50,7 +50,7 @@ class Worker(QObject):
                             markers.append({
                                 "type": "radio",
                                 "x": span["bbox"][0],
-                                "y": span["bbox"][1],
+                                "y": span["bbox"][3],
                                 "size": span["size"],
                                 "page_num": page_num
                             })
@@ -111,11 +111,12 @@ class Worker(QObject):
                     acroform.radio(
                         name=group_name,
                         value=f"Option{marker['x']}",
-                        x=marker['x'],
-                        y=original_page_height - (marker['y'] + marker['size'] + 2),
-                        size= marker['size'],
+                        x=marker['x'] - (marker['size'] / 2),
+                        y=original_page_height - (marker['y'] + (marker['size'] / 4) - .5),
+                        size= (marker['size'] * 1.5),
                         buttonStyle="cross",
                         shape="square",
+                        borderWidth=.5,
                         selected=False,
                     )
             text_counter = 1
