@@ -26,6 +26,11 @@ class Worker(QObject):
         
     def run(self):
         self.handle_doctype(self.parent, self.filePath)
+        
+    def get_text_width(self, text, font_name, font_size):
+        font = QFont(font_name, int(font_size))
+        metrics = QFontMetrics(font)
+        return metrics.width(text)
     
     
     def extract_pdf(self, filename):
@@ -40,6 +45,7 @@ class Worker(QObject):
             for block in text['blocks']:
                 for line in block['lines']:
                     for span in line['spans']:
+                        print(span)
                         if re.search(r'[\uf0a8\uf0f0]', span["text"]):
                             markers.append({
                                 "type": "radio",
@@ -51,28 +57,27 @@ class Worker(QObject):
                         else:
                             bracket_matches = re.finditer(r'\[([^\]]*)\]', span['text'])
                             for match in bracket_matches:
-                                print(match)
-                                print('___________________')
                                 start_index = match.start()
                                 end_index = match.end()
 
-                                preceding_text = span['text'][:start_index]
-                                bracket_text = span['text'][start_index:end_index]
+                                preceding_text = span['text'][:start_index].strip()
+                                bracket_text = span['text'][start_index:end_index].strip()
                                 
-                                preceding_text_width = fitz.get_text_length(preceding_text)
-                                bracket_text_width = fitz.get_text_length(bracket_text)
+                                preceding_text_width = self.get_text_width(preceding_text, span['font'], span['size'])
+                                bracket_text_width = self.get_text_width(bracket_text, span['font'], span['size'])
                                 print(f'preceding text: {preceding_text}, preceding text width: {preceding_text_width}')
                                 print(f'bracket text: {bracket_text}, bracket text width: {bracket_text_width}')
 
-                                start_x = span['bbox'][0] + preceding_text_width
-                                width = bracket_text_width
+                                margin_adjustment = 5
+                                start_x = span['bbox'][0] + preceding_text_width + margin_adjustment
+                                width = bracket_text_width - margin_adjustment * 2
                                 height = span['bbox'][3] - span['bbox'][1]
                                 lineNum += 1
 
                                 markers.append({
                                     "type": "text",
                                     "x": start_x,
-                                    "y": span['bbox'][1],
+                                    "y": span['bbox'][3],
                                     "width": width,
                                     'height': height,
                                     "page_num": page_num
@@ -108,19 +113,18 @@ class Worker(QObject):
                         value=f"Option{marker['x']}",
                         x=marker['x'],
                         y=original_page_height - (marker['y'] + marker['size'] + 2),
-                        size= (marker['size'] + 2),
+                        size= marker['size'],
                         buttonStyle="cross",
                         shape="square",
                         selected=False,
                     )
             text_counter = 1
             for marker in markers:
-                print(marker)
                 text_counter += 1
                 if marker["type"] == "text":
                     acroform.textfield(
                         name=f"TextField{text_counter}",
-                        x=marker['x'] - (marker['height'] / 2),
+                        x=marker['x'],
                         y=original_page_height - marker['y'],
                         width=marker['width'],
                         height=marker['height'],
@@ -166,7 +170,6 @@ class Worker(QObject):
         wd.DisplayAlerts = False
     
         doc = wd.Documents.Open(document)
-        print(dir(wd))
     
         doc.ExportAsFixedFormat(OutputFileName=os.path.abspath(output_file), ExportFormat=17)
     
