@@ -23,14 +23,13 @@ class Worker(QObject):
         self.filePath = filePath
         self.parent = parent
         
-        
     def run(self):
         self.handle_doctype(self.parent, self.filePath)
         
     def get_text_width(self, text, font_name, font_size):
-        font = QFont(font_name, int(font_size))
-        metrics = QFontMetrics(font)
-        return metrics.width(text)
+        font = fitz.Font()
+        point_width = font.text_length(text, font_size)
+        return point_width
     
     
     def extract_pdf(self, filename):
@@ -45,7 +44,6 @@ class Worker(QObject):
             for block in text['blocks']:
                 for line in block['lines']:
                     for span in line['spans']:
-                        print(span)
                         if re.search(r'[\uf0a8\uf0f0]', span["text"]):
                             markers.append({
                                 "type": "radio",
@@ -60,19 +58,21 @@ class Worker(QObject):
                                 start_index = match.start()
                                 end_index = match.end()
 
-                                preceding_text = span['text'][:start_index].strip()
-                                bracket_text = span['text'][start_index:end_index].strip()
+                                preceding_text = span['text'][:start_index]
+                                bracket_text = span['text'][start_index:end_index]
+                                
                                 
                                 preceding_text_width = self.get_text_width(preceding_text, span['font'], span['size'])
                                 bracket_text_width = self.get_text_width(bracket_text, span['font'], span['size'])
-                                print(f'preceding text: {preceding_text}, preceding text width: {preceding_text_width}')
-                                print(f'bracket text: {bracket_text}, bracket text width: {bracket_text_width}')
+                                #print(f'preceding text: {preceding_text}, preceding text width: {preceding_text_width}')
+                                #print(f'bracket text: {bracket_text}, bracket text width: {bracket_text_width}')
 
-                                margin_adjustment = 5
-                                start_x = span['bbox'][0] + preceding_text_width + margin_adjustment
-                                width = bracket_text_width - margin_adjustment * 2
+                                start_x = span['bbox'][0] + preceding_text_width
+                                width = bracket_text_width
                                 height = span['bbox'][3] - span['bbox'][1]
                                 lineNum += 1
+                                #print(f'bbox: {span} bbox x 0: {span['bbox'][0]}')
+                                #print(f'Start x: {start_x}')
 
                                 markers.append({
                                     "type": "text",
@@ -81,7 +81,8 @@ class Worker(QObject):
                                     "width": width,
                                     'height': height,
                                     "page_num": page_num
-                                    })                 
+                                    })
+        #print(markers)                
         self.create_interactive_pdf(filename, markers)
                         
     def create_interactive_pdf(self, original_file, markers):
